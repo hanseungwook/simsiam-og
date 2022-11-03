@@ -429,6 +429,8 @@ if __name__ == '__main__':
     parser.add_argument('--log_id', default='', type=str)
     parser.add_argument('--checkpoint-dir', type=str, default='./experiment')
 
+    parser.add_argument('--server', type=str, default='sc')
+
     args = parser.parse_args()
 
     if args.submit:
