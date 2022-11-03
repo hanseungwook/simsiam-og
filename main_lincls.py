@@ -464,8 +464,7 @@ def make_sh_and_submit(args, delay=0):
     options = args.arg_str
     if delay == 0:
         options_split = options.split(" ")[:-2]
-        print(options_split)
-        name = ''.join([opt1.replace("--","").replace("=","") for opt1 in options.split(" ")])
+        name = ''.join([opt1.replace("--","").replace("=","") for opt1 in options_split])
         name = args.add_prefix + name + '-lp'
 
     else: # log_id should be already defined
