@@ -334,7 +334,7 @@ def make_sh_and_submit(args, delay=0):
     if args.server == 'aimos':
         options += f' --server=aimos --arg_str=\"{args.arg_str}\" '
         preamble = (
-            f'#!/bin/sh\n#SBATCH --gres=gpu:2\n#SBATCH --exclusiv\n#SBATCH --cpus-per-task=20\n#SBATCH '
+            f'#!/bin/sh\n#SBATCH --gres=gpu:2\n#SBATCH --exclusive\n#SBATCH --cpus-per-task=20\n#SBATCH '
             f'-N 1\n#SBATCH -t 360\n#SBATCH ')
         preamble += f'--begin=now+{delay}hour\n#SBATCH '
         preamble += (f'-o ./logs/{name}.out\n#SBATCH '
@@ -345,7 +345,7 @@ def make_sh_and_submit(args, delay=0):
         username = getpass.getuser()
         options += f' --server={args.server} '
         preamble = (
-            f'#!/bin/sh\n#SBATCH --gres=gpu:volta:2\n#SBATCH --cpus-per-task=20\n#SBATCH '
+            f'#!/bin/sh\n#SBATCH --gres=gpu:volta:1\n#SBATCH --cpus-per-task=20\n#SBATCH '
             f'-o ./logs/{name}.out\n#SBATCH '
             f'--job-name={name}\n#SBATCH '
             f'--open-mode=append\n\n'
@@ -356,7 +356,8 @@ def make_sh_and_submit(args, delay=0):
         port = random.randrange(10000, 20000)
         file.write(
             f'python {sys.argv[0]} '
-            f'{options} --log_id={name} --dist-url \'tcp://localhost:{port}\' '
+            # f'{options} --log_id={name} --dist-url \'tcp://localhost:{port}\' '
+            f'{options} --gpu 0 --log_id={name} '
         )
         if args.server == 'sc' or args.server == 'rumensc':
             file.write(f'--data=/home/gridsan/{username}/MAML-Soljacic_shared/imagenet100-new ')
