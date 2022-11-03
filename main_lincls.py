@@ -510,7 +510,7 @@ if __name__ == '__main__':
 
 
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-    parser.add_argument('data', metavar='DIR',
+    parser.add_argument('--data', metavar='DIR',
                         help='path to dataset')
     parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=model_names,
