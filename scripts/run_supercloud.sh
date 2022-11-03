@@ -4,5 +4,6 @@ module load anaconda/2021a
 
 for lr in 0.05 0.1 0.15 0.2
 do
-python main_simsiam.py --submit --server=sc --arg_str="--batch-size=256 --lr ${lr} --world-size 1 --rank 0 --multiprocessing-distributed --fix-pred-lr"
+port=
+python main_simsiam.py --submit --server=sc --arg_str="dist-url 'tcp://localhost:$(( $RANDOM % 10000 + 1 ))' --batch-size=256 --lr ${lr} --world-size 1 --rank 0 --multiprocessing-distributed --fix-pred-lr"
 done
