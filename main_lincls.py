@@ -485,7 +485,7 @@ def make_sh_and_submit(args, delay=0):
 
     else:
         username = getpass.getuser()
-        options += f'--server={args.server} '
+        options += f' --server={args.server} '
         preamble = (
             f'#!/bin/sh\n#SBATCH --gres=gpu:volta:1\n#SBATCH --cpus-per-task=20\n#SBATCH '
             f'-o ./logs_lp/{name}.out\n#SBATCH '
