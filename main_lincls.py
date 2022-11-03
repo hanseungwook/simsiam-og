@@ -125,7 +125,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 # retain only encoder up to before the embedding layer
                 if k.startswith('encoder') and not k.startswith('encoder.fc'):
                     # remove prefix
-                    state_dict[k[len("module.encoder."):]] = state_dict[k]
+                    state_dict[k[len("encoder."):]] = state_dict[k]
 
                 # delete renamed or unused k
                 del state_dict[k]
