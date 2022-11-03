@@ -352,9 +352,10 @@ def make_sh_and_submit(args, delay=0):
     with open(f'./scripts/{name}_{delay}.sh', 'w') as file:
         file.write(preamble)
         file.write("echo \"current time: $(date)\";\n")
+        port = random.randrange(10000, 20000)
         file.write(
             f'python {sys.argv[0]} '
-            f'{options} --gpu=0 --log_id={name} '
+            f'{options} --log_id={name} --dist-url \'tcp://localhost:{port}\' '
         )
         if args.server == 'sc' or args.server == 'rumensc':
             file.write(f'--data=/home/gridsan/{username}/MAML-Soljacic_shared/imagenet100-new ')
