@@ -241,9 +241,10 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
             images[0] = images[0].cuda(args.gpu, non_blocking=True)
             images[1] = images[1].cuda(args.gpu, non_blocking=True)
 
-        # compute output and loss
-        p1, p2, z1, z2 = model(x1=images[0], x2=images[1])
-        loss = -(criterion(p1, z2).mean() + criterion(p2, z1).mean()) * 0.5
+        with torch.cuda.amp.autocast():
+            # compute output and loss
+            p1, p2, z1, z2 = model(x1=images[0], x2=images[1])
+            loss = -(criterion(p1, z2).mean() + criterion(p2, z1).mean()) * 0.5
 
         losses.update(loss.item(), images[0].size(0))
 
