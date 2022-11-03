@@ -361,7 +361,7 @@ def make_sh_and_submit(args, delay=0):
         port = random.randrange(10000, 20000)
         file.write(
             f'python {sys.argv[0]} '
-            # f'{options} --log_id={name} --dist-url \'tcp://localhost:{port}\' '
+            # f'{options} --log_id={name} --multiprocessing-distributed --dist-url \'tcp://localhost:{port}\' '
             f'{options} --gpu 0 --log_id={name} '
         )
         if args.server == 'sc' or args.server == 'rumensc':
