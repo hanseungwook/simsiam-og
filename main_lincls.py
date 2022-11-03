@@ -560,6 +560,7 @@ if __name__ == '__main__':
                              'multi node data parallel training')
 
     # additional configs:
+    parser.add_argument('--server', type=str, default='sc')
     parser.add_argument('--pretrained', default='', type=str,
                         help='path to simsiam pretrained checkpoint')
     parser.add_argument('--lars', action='store_true',
