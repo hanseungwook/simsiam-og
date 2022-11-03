@@ -500,7 +500,7 @@ def make_sh_and_submit(args, delay=0):
             f'{options} --gpu=0 --log_id={name} '
         )
         if args.server == 'sc' or args.server == 'rumensc':
-            file.write(f'--data=/home/gridsan/{username}/MAML-Soljacic-shared/imagenet100-new ')
+            file.write(f'--data=/home/gridsan/{username}/MAML-Soljacic_shared/imagenet100-new ')
     os.system(f'sbatch ./scripts/{name}_{delay}.sh')
 
 if __name__ == '__main__':
