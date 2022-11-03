@@ -272,7 +272,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 'optimizer' : optimizer.state_dict(),
             }, is_best, filename= args.checkpoint_dir + '/lp_resnet50.pth.tar')
             if epoch == args.start_epoch:
-                sanity_check(model.state_dict(), args.pretrained)
+                sanity_check(model.state_dict(), args.pretrained, args.distributed)
 
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
@@ -380,7 +380,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
             shutil.copyfile(filename, 'model_best.pth.tar')
 
 
-def sanity_check(state_dict, pretrained_weights):
+def sanity_check(state_dict, pretrained_weights, distributed):
     """
     Linear classifier should not change any weights other than the linear layer.
     This sanity check asserts nothing wrong happens (e.g., BN stats updated).
@@ -395,8 +395,12 @@ def sanity_check(state_dict, pretrained_weights):
             continue
 
         # name in pretrained model
-        k_pre = 'module.encoder.' + k[len('module.'):] \
-            if k.startswith('module.') else 'module.encoder.' + k
+        if args.distributed:
+            k_pre = 'module.encoder.' + k[len('module.'):] \
+                if k.startswith('module.') else 'module.encoder.' + k
+        else:
+            k_pre = 'encoder.' + k[len('module.'):] \
+                if k.startswith('module.') else 'encoder.' + k
 
         assert ((state_dict[k].cpu() == state_dict_pre[k_pre]).all()), \
             '{} is changed in linear classifier training.'.format(k)
