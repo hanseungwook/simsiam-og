@@ -333,7 +333,7 @@ def make_sh_and_submit(args, delay=0):
     if args.server == 'aimos':
         options += f' --server=aimos --arg_str=\"{args.arg_str}\" '
         preamble = (
-            f'#!/bin/sh\n#SBATCH --gres=gpu:1\n#SBATCH --cpus-per-task=20\n#SBATCH '
+            f'#!/bin/sh\n#SBATCH --gres=gpu:1\n#SBATCH --exclusiv\n#SBATCH --cpus-per-task=20\n#SBATCH '
             f'-N 1\n#SBATCH -t 360\n#SBATCH ')
         preamble += f'--begin=now+{delay}hour\n#SBATCH '
         preamble += (f'-o ./logs/{name}.out\n#SBATCH '
