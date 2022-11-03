@@ -344,7 +344,7 @@ def make_sh_and_submit(args, delay=0):
         username = getpass.getuser()
         options += f' --server={args.server} '
         preamble = (
-            f'#!/bin/sh\n#SBATCH --gres=gpu:volta:1\n#SBATCH --cpus-per-task=20\n#SBATCH '
+            f'#!/bin/sh\n#SBATCH --gres=gpu:volta:2\n#SBATCH --cpus-per-task=20\n#SBATCH '
             f'-o ./logs/{name}.out\n#SBATCH '
             f'--job-name={name}\n#SBATCH '
             f'--open-mode=append\n\n'
