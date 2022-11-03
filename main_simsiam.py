@@ -180,7 +180,7 @@ def main_worker(gpu, ngpus_per_node, args):
         torch.cuda.set_device(args.gpu)
         model = model.cuda(args.gpu)
         # comment out the following line for debugging
-        raise NotImplementedError("Only DistributedDataParallel is supported.")
+        # raise NotImplementedError("Only DistributedDataParallel is supported.")
     else:
         # AllGather implementation (batch shuffle, queue update, etc.) in
         # this code only supports DistributedDataParallel.
@@ -191,8 +191,12 @@ def main_worker(gpu, ngpus_per_node, args):
     criterion = nn.CosineSimilarity(dim=1).cuda(args.gpu)
 
     if args.fix_pred_lr:
-        optim_params = [{'params': model.module.encoder.parameters(), 'fix_lr': False},
-                        {'params': model.module.predictor.parameters(), 'fix_lr': True}]
+        if args.distributed:
+            optim_params = [{'params': model.module.encoder.parameters(), 'fix_lr': False},
+                            {'params': model.module.predictor.parameters(), 'fix_lr': True}]
+        else:
+            optim_params = [{'params': model.encoder.parameters(), 'fix_lr': False},
+                            {'params': model.predictor.parameters(), 'fix_lr': True}]  
     else:
         optim_params = model.parameters()
 
@@ -309,7 +313,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
             progress.display(i)
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, filename='simsiam_checkpoint.pth.tar'):
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
