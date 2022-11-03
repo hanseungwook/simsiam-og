@@ -460,7 +460,7 @@ def accuracy(output, target, topk=(1,)):
 
 def make_sh_and_submit(args, delay=0):
     os.makedirs('./scripts/', exist_ok=True)
-    os.makedirs('./logs/', exist_ok=True)
+    os.makedirs('./logs_lp/', exist_ok=True)
     options = args.arg_str
     if delay == 0:
         options_split = options.split(" ")[:-2]
@@ -479,7 +479,7 @@ def make_sh_and_submit(args, delay=0):
             f'#!/bin/sh\n#SBATCH --gres=gpu:1\n#SBATCH --cpus-per-task=20\n#SBATCH '
             f'-N 1\n#SBATCH -t 360\n#SBATCH ')
         preamble += f'--begin=now+{delay}hour\n#SBATCH '
-        preamble += (f'-o ./logs/{name}.out\n#SBATCH '
+        preamble += (f'-o ./logs_lp/{name}.out\n#SBATCH '
                         f'--job-name={name}_{delay}\n#SBATCH '
                         f'--open-mode=append\n\n')
 
@@ -488,7 +488,7 @@ def make_sh_and_submit(args, delay=0):
         options += f'--server={args.server} '
         preamble = (
             f'#!/bin/sh\n#SBATCH --gres=gpu:volta:1\n#SBATCH --cpus-per-task=20\n#SBATCH '
-            f'-o ./logs/{name}.out\n#SBATCH '
+            f'-o ./logs_lp/{name}.out\n#SBATCH '
             f'--job-name={name}\n#SBATCH '
             f'--open-mode=append\n\n'
         )
