@@ -30,68 +30,10 @@ import torchvision.models as models
 import simsiam.loader
 import simsiam.builder
 
-model_names = sorted(name for name in models.__dict__
-    if name.islower() and not name.startswith("__")
-    and callable(models.__dict__[name]))
+import getpass
+import sys
 
-parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-parser.add_argument('data', metavar='DIR',
-                    help='path to dataset')
-parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
-                    choices=model_names,
-                    help='model architecture: ' +
-                        ' | '.join(model_names) +
-                        ' (default: resnet50)')
-parser.add_argument('-j', '--workers', default=32, type=int, metavar='N',
-                    help='number of data loading workers (default: 32)')
-parser.add_argument('--epochs', default=100, type=int, metavar='N',
-                    help='number of total epochs to run')
-parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
-                    help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=512, type=int,
-                    metavar='N',
-                    help='mini-batch size (default: 512), this is the total '
-                         'batch size of all GPUs on the current node when '
-                         'using Data Parallel or Distributed Data Parallel')
-parser.add_argument('--lr', '--learning-rate', default=0.05, type=float,
-                    metavar='LR', help='initial (base) learning rate', dest='lr')
-parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                    help='momentum of SGD solver')
-parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
-                    metavar='W', help='weight decay (default: 1e-4)',
-                    dest='weight_decay')
-parser.add_argument('-p', '--print-freq', default=10, type=int,
-                    metavar='N', help='print frequency (default: 10)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                    help='path to latest checkpoint (default: none)')
-parser.add_argument('--world-size', default=-1, type=int,
-                    help='number of nodes for distributed training')
-parser.add_argument('--rank', default=-1, type=int,
-                    help='node rank for distributed training')
-parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
-                    help='url used to set up distributed training')
-parser.add_argument('--dist-backend', default='nccl', type=str,
-                    help='distributed backend')
-parser.add_argument('--seed', default=None, type=int,
-                    help='seed for initializing training. ')
-parser.add_argument('--gpu', default=None, type=int,
-                    help='GPU id to use.')
-parser.add_argument('--multiprocessing-distributed', action='store_true',
-                    help='Use multi-processing distributed training to launch '
-                         'N processes per node, which has N GPUs. This is the '
-                         'fastest way to use PyTorch for either single node or '
-                         'multi node data parallel training')
-
-# simsiam specific configs:
-parser.add_argument('--dim', default=2048, type=int,
-                    help='feature dimension (default: 2048)')
-parser.add_argument('--pred-dim', default=512, type=int,
-                    help='hidden dimension of the predictor (default: 512)')
-parser.add_argument('--fix-pred-lr', action='store_true',
-                    help='Fix learning rate for the predictor')
-
-def main():
-    args = parser.parse_args()
+def main(args):
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -126,6 +68,10 @@ def main():
 
 
 def main_worker(gpu, ngpus_per_node, args):
+    os.makedirs(args.checkpoint_dir, exist_ok=True)
+    args.checkpoint_dir = os.path.join(args.checkpoint_dir, args.log_id)
+    os.makedirs(args.checkpoint_dir, exist_ok=True)
+
     args.gpu = gpu
 
     # suppress printing if not master
@@ -196,7 +142,7 @@ def main_worker(gpu, ngpus_per_node, args):
                             {'params': model.module.predictor.parameters(), 'fix_lr': True}]
         else:
             optim_params = [{'params': model.encoder.parameters(), 'fix_lr': False},
-                            {'params': model.predictor.parameters(), 'fix_lr': True}]  
+                            {'params': model.predictor.parameters(), 'fix_lr': True}]
     else:
         optim_params = model.parameters()
 
@@ -270,7 +216,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 'arch': args.arch,
                 'state_dict': model.state_dict(),
                 'optimizer' : optimizer.state_dict(),
-            }, is_best=False, filename='simsiam_checkpoint_{:04d}.pth.tar'.format(epoch))
+            }, is_best=False, filename= args.checkpoint_dir + '/checkpoint_{:04d}.pth.tar'.format(epoch))
 
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
@@ -369,6 +315,120 @@ def adjust_learning_rate(optimizer, init_lr, epoch, args):
         else:
             param_group['lr'] = cur_lr
 
+def make_sh_and_submit(args, delay=0):
+    os.makedirs('./scripts/', exist_ok=True)
+    os.makedirs('./logs/', exist_ok=True)
+    options = args.arg_str
+    if delay == 0:
+        name = ''.join([opt1.replace("--","").replace("=","") for opt1 in options.split(" ")])
+        name = args.add_prefix + name
+
+    else: # log_id should be already defined
+        name = args.log_id
+    print('Submitting the job with options: ')
+    # print(options)
+    print(f"experiment name: {name}")
+
+    if args.server == 'aimos':
+        options += f'--server=aimos --arg_str=\"{args.arg_str}\" '
+        preamble = (
+            f'#!/bin/sh\n#SBATCH --gres=gpu:1\n#SBATCH --cpus-per-task=20\n#SBATCH '
+            f'-N 1\n#SBATCH -t 360\n#SBATCH ')
+        preamble += f'--begin=now+{delay}hour\n#SBATCH '
+        preamble += (f'-o ./logs/{name}.out\n#SBATCH '
+                        f'--job-name={name}_{delay}\n#SBATCH '
+                        f'--open-mode=append\n\n')
+
+    else:
+        username = getpass.getuser()
+        options += f'--server={args.server} '
+        preamble = (
+            f'#!/bin/sh\n#SBATCH --gres=gpu:volta:1\n#SBATCH --cpus-per-task=20\n#SBATCH '
+            f'-o ./logs/{name}.out\n#SBATCH '
+            f'--job-name={name}\n#SBATCH '
+            f'--open-mode=append\n\n'
+        )
+    with open(f'./scripts/{name}_{delay}.sh', 'w') as file:
+        file.write(preamble)
+        file.write("echo \"current time: $(date)\";\n")
+        file.write(
+            f'python {sys.argv[0]} '
+            f'{options} --gpu=0 --log_id={name} '
+        )
+        if args.server == 'sc' or args.server == 'rumensc':
+            file.write(f'--data=/home/gridsan/{username}/MAML-Soljacic/imagenet100-new ')
+    os.system(f'sbatch ./scripts/{name}_{delay}.sh')
 
 if __name__ == '__main__':
-    main()
+
+    model_names = sorted(name for name in models.__dict__
+        if name.islower() and not name.startswith("__")
+        and callable(models.__dict__[name]))
+
+    parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
+    parser.add_argument('data', metavar='DIR',
+                        help='path to dataset')
+    parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
+                        choices=model_names,
+                        help='model architecture: ' +
+                            ' | '.join(model_names) +
+                            ' (default: resnet50)')
+    parser.add_argument('-j', '--workers', default=32, type=int, metavar='N',
+                        help='number of data loading workers (default: 32)')
+    parser.add_argument('--epochs', default=100, type=int, metavar='N',
+                        help='number of total epochs to run')
+    parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
+                        help='manual epoch number (useful on restarts)')
+    parser.add_argument('-b', '--batch-size', default=512, type=int,
+                        metavar='N',
+                        help='mini-batch size (default: 512), this is the total '
+                             'batch size of all GPUs on the current node when '
+                             'using Data Parallel or Distributed Data Parallel')
+    parser.add_argument('--lr', '--learning-rate', default=0.05, type=float,
+                        metavar='LR', help='initial (base) learning rate', dest='lr')
+    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
+                        help='momentum of SGD solver')
+    parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
+                        metavar='W', help='weight decay (default: 1e-4)',
+                        dest='weight_decay')
+    parser.add_argument('-p', '--print-freq', default=10, type=int,
+                        metavar='N', help='print frequency (default: 10)')
+    parser.add_argument('--resume', default='', type=str, metavar='PATH',
+                        help='path to latest checkpoint (default: none)')
+    parser.add_argument('--world-size', default=-1, type=int,
+                        help='number of nodes for distributed training')
+    parser.add_argument('--rank', default=-1, type=int,
+                        help='node rank for distributed training')
+    parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
+                        help='url used to set up distributed training')
+    parser.add_argument('--dist-backend', default='nccl', type=str,
+                        help='distributed backend')
+    parser.add_argument('--seed', default=None, type=int,
+                        help='seed for initializing training. ')
+    parser.add_argument('--gpu', default=None, type=int,
+                        help='GPU id to use.')
+    parser.add_argument('--multiprocessing-distributed', action='store_true',
+                        help='Use multi-processing distributed training to launch '
+                             'N processes per node, which has N GPUs. This is the '
+                             'fastest way to use PyTorch for either single node or '
+                             'multi node data parallel training')
+
+    # simsiam specific configs:
+    parser.add_argument('--dim', default=2048, type=int,
+                        help='feature dimension (default: 2048)')
+    parser.add_argument('--pred-dim', default=512, type=int,
+                        help='hidden dimension of the predictor (default: 512)')
+    parser.add_argument('--fix-pred-lr', action='store_true',
+                        help='Fix learning rate for the predictor')
+    parser.add_argument('--submit', action='store_true')
+    parser.add_argument('--arg_str', default='--', type=str)
+    parser.add_argument('--add_prefix', default='', type=str)
+    parser.add_argument('--log_id', default='', type=str)
+    parser.add_argument('--checkpoint-dir', type=str, default='./experiment')
+
+    args = parser.parse_args()
+
+    if args.submit:
+        make_sh_and_submit(args)
+    else:
+        main(args)
