@@ -241,10 +241,15 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
             images[0] = images[0].cuda(args.gpu, non_blocking=True)
             images[1] = images[1].cuda(args.gpu, non_blocking=True)
 
-        with torch.cuda.amp.autocast():
+        if args.fp16:
+            with torch.cuda.amp.autocast():
+                # compute output and loss
+                p1, p2, z1, z2 = model(x1=images[0], x2=images[1])
+                loss = -(criterion(p1, z2).mean() + criterion(p2, z1).mean()) * 0.5
+        else:
             # compute output and loss
             p1, p2, z1, z2 = model(x1=images[0], x2=images[1])
-            loss = -(criterion(p1, z2).mean() + criterion(p2, z1).mean()) * 0.5
+            loss = -(criterion(p1, z2).mean() + criterion(p2, z1).mean()) * 0.5  
 
         losses.update(loss.item(), images[0].size(0))
 
@@ -426,6 +431,8 @@ if __name__ == '__main__':
                         help='hidden dimension of the predictor (default: 512)')
     parser.add_argument('--fix-pred-lr', action='store_true',
                         help='Fix learning rate for the predictor')
+    parser.add_argument('--fp16', action='store_true', default=False,
+                        help='Use mixed precision')
     parser.add_argument('--submit', action='store_true')
     parser.add_argument('--arg_str', default='--', type=str)
     parser.add_argument('--add_prefix', default='', type=str)
