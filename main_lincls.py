@@ -463,6 +463,7 @@ def make_sh_and_submit(args, delay=0):
     os.makedirs('./logs/', exist_ok=True)
     options = args.arg_str
     if delay == 0:
+        options_split = options.split(" ")[:-1]
         name = ''.join([opt1.replace("--","").replace("=","") for opt1 in options.split(" ")])
         name = args.add_prefix + name + '-lp'
 
