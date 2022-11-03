@@ -69,6 +69,10 @@ def main(args):
 
 
 def main_worker(gpu, ngpus_per_node, args):
+    os.makedirs(args.checkpoint_dir, exist_ok=True)
+    args.checkpoint_dir = os.path.join(args.checkpoint_dir, args.log_id)
+    os.makedirs(args.checkpoint_dir, exist_ok=True)
+
     global best_acc1
     args.gpu = gpu
 
@@ -259,7 +263,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 'state_dict': model.state_dict(),
                 'best_acc1': best_acc1,
                 'optimizer' : optimizer.state_dict(),
-            }, is_best)
+            }, is_best, filename= args.checkpoint_dir + '/lp_resnet50.pth.tar')
             if epoch == args.start_epoch:
                 sanity_check(model.state_dict(), args.pretrained)
 
@@ -565,6 +569,8 @@ if __name__ == '__main__':
     parser.add_argument('--arg_str', default='--', type=str)
     parser.add_argument('--add_prefix', default='', type=str)
     parser.add_argument('--log_id', default='', type=str)
+    parser.add_argument('--checkpoint-dir', type=str, default='./experiment_lp')
+
     args = parser.parse_args()
 
     if args.submit:
